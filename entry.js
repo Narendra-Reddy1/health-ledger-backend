@@ -10,11 +10,11 @@ require("dotenv").config()
 const app = express();
 let provider;
 app.use(express.json());
-app.use((req, res, next) => {
-    req.provider = provider;
+// app.use((req, res, next) => {
+//     req.provider = provider;
 
-    next();
-})
+//     next();
+// })
 app.use(authRouter);
 app.use(userRouter);
 app.use(tournamentRouter);
@@ -23,6 +23,6 @@ app.use(tournamentRouter);
 mongoose.connect(`mongodb+srv://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@cluster0.y6m6z3o.mongodb.net/fitness-ledger`).then(result => {
     console.log("Connected...");
     app.listen(process.env.PORT || 3000, () => {
-        provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        //provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
     });
 })

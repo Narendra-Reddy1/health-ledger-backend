@@ -73,3 +73,36 @@ exports.joinTournament = async (req, res) => {
         res.status(500).send(JSON.stringify(e));
     }
 }
+
+exports.recordSteps = async (req, res) => {
+    const stepCount = req.body.steps;
+    const username = req.body.username;
+    const id = req.body.tournamentId;
+    const tournament = await Tournament.findOne({ tournamentId: id });
+    if (!tournament) {
+        return res.status(404).send(JSON.stringify({
+            message: `no tournament found with id: ${id}`
+        }))
+    }
+    const isRunning = await tournament.isRunning();
+    if (!isRunning) {
+        return res.status(404).send(JSON.stringify({
+            message: "tournament is not LIVE!"
+        }))
+    }
+    const participant = tournament.participants.find(x => x.username == username);
+    if (!participant) {
+        return res.status(404).send({
+            message: `no pqrticipant with username: ${username}`
+        })
+    }
+    participant.stepCount += steps;
+
+    await tournament.save();
+
+    res.status(200).send(JSON.stringify({
+        tournamentId: id,
+        updatedSteps: participant.stepCount
+    }))
+
+}
