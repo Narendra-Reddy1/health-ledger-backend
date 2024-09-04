@@ -13,6 +13,10 @@ const userModel = new mongoose.Schema({
         type: String,
         required: false
     },
+    publicKey: {
+        type: String,
+        required: false
+    },
     wallet: {
         type: String,
         required: false,
