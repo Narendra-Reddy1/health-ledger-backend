@@ -1,8 +1,8 @@
 const { ethers } = require("ethers");
-const UserModel = require("../models/UserModel");
+const UserModel = require("../models/User");
 const bcrypt = require("bcryptjs");
 const { JsonRpcProvider } = require("ethers");
-const { tokenContract, getTokenContract, getProvider, getDefaultRunner } = require("../core/contracts");
+const { tokenContract, getTokenContract, getProvider, getDefaultRunner, getOwner } = require("../core/contracts");
 
 
 
@@ -39,7 +39,6 @@ exports.getBalance = async (req, res) => {
     try {
 
         const username = req.params.username;
-        console.log("req: ", username);
         const user = await UserModel.findOne({ username: username })
         if (user == (null | undefined)) return res.status(404).send(JSON.stringify({
             message: "user not found"
@@ -47,7 +46,7 @@ exports.getBalance = async (req, res) => {
         const publicKey = user.publicKey;
         //const publicKey = "0xBE60EfCE791c19836F06b54B9E827b7d91b7DDD8";
 
-
+        //await getTransactions(publicKey)
 
         const tokenBalance = await (getTokenContract().connect(getDefaultRunner())).balanceOf(user.publicKey);
         res.send(JSON.stringify({
@@ -62,3 +61,21 @@ exports.getBalance = async (req, res) => {
         res.status(500).send(JSON.stringify(e));
     }
 }
+
+// async function getTransactions(publicKey) {
+//     const tokenContract = getTokenContract().connect(getDefaultRunner());
+
+//     await tokenContract.connect(getOwner()).transfer(publicKey, ethers.parseEther("100"));
+
+//     const filterFrom = tokenContract.filters.Transfer(publicKey, null);
+//     const filterTo = tokenContract.filters.Transfer(null, publicKey);
+
+//     const fromTransfers = await tokenContract.queryFilter(filterFrom, 0, "latest");
+//     const toTransfers = await tokenContract.queryFilter(filterTo, 0, "latest");
+
+
+//     console.log(`withdrawls `, fromTransfers)
+//     console.log(`Deposits `, toTransfers)
+
+
+// }

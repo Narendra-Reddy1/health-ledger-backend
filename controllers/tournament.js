@@ -1,12 +1,14 @@
 const { getLedgerContract, getOwner } = require("../core/contracts");
 const Tournament = require("../models/Tournament");
-const UserModel = require("../models/UserModel");
+const UserModel = require("../models/User");
 
 
-exports.createTournament = (req, res) => {
+//creating tournament is admin task
+// exports.createTournament = (req, res) => {
 
 
-}
+// }
+
 exports.getTournament = async (req, res) => {
     const id = req.body.tournamentId
     const tournament = await Tournament.findOne({ tournamentId: id });
@@ -50,8 +52,8 @@ exports.joinTournament = async (req, res) => {
         const tx = await getLedgerContract().connect(getOwner()).forceJoinTournament(id, user.publicKey);
         const receipt = await tx.wait();
         if (receipt.status == 1) {
-            tournament.participants.add({
-                publicKey: publicKey,
+            tournament.participants.push({
+                publicKey: user.publicKey,
                 stepCount: 0,
                 username: username,
             })
@@ -75,34 +77,50 @@ exports.joinTournament = async (req, res) => {
 }
 
 exports.recordSteps = async (req, res) => {
-    const stepCount = req.body.steps;
-    const username = req.body.username;
-    const id = req.body.tournamentId;
-    const tournament = await Tournament.findOne({ tournamentId: id });
-    if (!tournament) {
-        return res.status(404).send(JSON.stringify({
-            message: `no tournament found with id: ${id}`
-        }))
-    }
-    const isRunning = await tournament.isRunning();
-    if (!isRunning) {
-        return res.status(404).send(JSON.stringify({
-            message: "tournament is not LIVE!"
-        }))
-    }
-    const participant = tournament.participants.find(x => x.username == username);
-    if (!participant) {
-        return res.status(404).send({
-            message: `no pqrticipant with username: ${username}`
-        })
-    }
-    participant.stepCount += steps;
+    try {
+        //use spread operator bc
+        const stepCount = req.body.steps;
+        const username = req.body.username;
+        const id = req.body.tournamentId;
 
-    await tournament.save();
+        const tournament = await Tournament.findOne({ tournamentId: id });
+        if (!tournament) {
+            return res.status(404).send(JSON.stringify({
+                message: `no tournament found with id: ${id}`
+            }))
+        }
+        const isRunning = await tournament.isRunning();
+        if (!isRunning) {
+            return res.status(404).send(JSON.stringify({
+                message: "tournament is not LIVE!"
+            }))
+        }
+        const participant = tournament.participants.find(x => x.username == username);
+        if (!participant) {
+            return res.status(404).send({
+                message: `no pqrticipant with username: ${username}`
+            })
+        }
+        const tx = await getLedgerContract().connect(getOwner()).recordSteps(id, participant.publicKey, stepCount);
+        const receipt = await tx.wait();
+        if (receipt.status == 1) {
+            participant.steps += stepCount;
+            await tournament.save();
+            res.status(200).send(JSON.stringify({
+                txHash: tx.hash,
+                tournamentId: id,
+                updatedSteps: participant.steps
+            }))
+        }
+        else {
+            res.send.status(500).send(JSON.stringify({
+                message: `failed to record steps to tournamentId:: ${id}`
+            }))
+        }
 
-    res.status(200).send(JSON.stringify({
-        tournamentId: id,
-        updatedSteps: participant.stepCount
-    }))
-
+    }
+    catch (e) {
+        res.status(500).send(e.toString())
+    }
 }
+

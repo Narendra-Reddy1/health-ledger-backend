@@ -11,6 +11,7 @@ stepCount.
 
 const { default: mongoose } = require("mongoose");
 const { getLedgerContract, getDefaultRunner } = require("../core/contracts");
+const PrizeDistribution = require("./prizeDistribution");
 
 const Tournament = new mongoose.Schema({
     tournamentId: {
@@ -29,42 +30,16 @@ const Tournament = new mongoose.Schema({
         type: Number,
         required: true
     },
-    prize_distribution: {
-        first: {
-            type: Number,
-            required: true,
-        },
-        second: {
-            type: Number,
-            required: true,
-        },
-        third: {
-            type: Number,
-            required: true,
-        },
-        fourToTen: {
-            type: Number,
-            required: true,
-        },
-        elevenToTwentyFive: {
-            type: Number,
-            required: true,
-        },
-        twentySixToFifty: {
-            type: Number,
-            required: true,
-        },
-        fiftyOneToHundred: {
-            type: Number,
-            required: true,
-        },
+    prizeDistributionId: {
+        type: Number,
+        required: true
     },
     participants: [{
         username: {
             type: String,
             required: true,
         },
-        stepCount: {
+        steps: {
             type: Number,
             required: true
         },

@@ -1,5 +1,5 @@
 const express = require("express");
-const { createWallet, getBalance } = require("../controllers/userController");
+const { createWallet, getBalance } = require("../controllers/user");
 
 const userRouter = express.Router();
 

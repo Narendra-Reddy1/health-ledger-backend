@@ -1,14 +1,11 @@
 const express = require("express");
-const { userRouter } = require("./routes/userRoute");
-const { ethers } = require("ethers");
-const { Wallet } = require("ethers");
+const { userRouter } = require("./routes/user");
 const { default: mongoose } = require("mongoose");
-const { authRouter } = require("./routes/authRouter");
-const { tournamentRouter } = require("./routes/tournamentRoute");
+const { authRouter } = require("./routes/auth");
+const { tournamentRouter } = require("./routes/tournament");
 require("dotenv").config()
 
 const app = express();
-let provider;
 app.use(express.json());
 // app.use((req, res, next) => {
 //     req.provider = provider;
@@ -26,3 +23,5 @@ mongoose.connect(`mongodb+srv://${process.env.MONGO_USERNAME}:${process.env.MONG
         //provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
     });
 })
+
+///https://amoy.polygonscan.com/address/{publicKey}

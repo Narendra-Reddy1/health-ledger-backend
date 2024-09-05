@@ -1,5 +1,5 @@
 const express = require("express");
-const { getTournament, joinTournament, recordSteps } = require("../controllers/tournamentController");
+const { getTournament, joinTournament, recordSteps } = require("../controllers/tournament");
 
 const tournamentRouter = express.Router();
 

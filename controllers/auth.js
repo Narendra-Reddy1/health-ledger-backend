@@ -1,6 +1,6 @@
 const { ethers } = require("ethers");
 const bcrypt = require("bcryptjs")
-const UserModel = require("../models/UserModel");
+const UserModel = require("../models/User");
 
 exports.postSignup = async (req, res) => {
     //const walletData = await createWallet();
@@ -35,7 +35,7 @@ exports.postLogin = async (req, res) => {
 
         const user = await UserModel.findOne({ username: req.body.username });
         const isMatched = await bcrypt.compare(req.body.password, user.password);
-        if (!isMatched || user == (null | undefined)) {
+        if (!isMatched || !user) {
             return res.status(404).send(JSON.stringify({
                 message: "Invalid credentials"
             }))
