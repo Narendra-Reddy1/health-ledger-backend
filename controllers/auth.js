@@ -1,6 +1,7 @@
 const { ethers } = require("ethers");
 const bcrypt = require("bcryptjs")
 const UserModel = require("../models/User");
+const { getTokenContract, getDefaultRunner } = require("../core/contracts");
 
 exports.postSignup = async (req, res) => {
     //const walletData = await createWallet();
@@ -40,12 +41,15 @@ exports.postLogin = async (req, res) => {
                 message: "Invalid credentials"
             }))
         }
+        let tokenBalance = 0;
+        if (user.publicKey)
+            tokenBalance = (Number)(await getTokenContract().connect(getDefaultRunner()).balanceOf(user.publicKey))
         res.status(200).send(JSON.stringify({
             user: {
                 username: user.username,
                 stepsCount: user.stepsCount,
                 publicKey: user.publicKey,
-                //TOKEN?? 
+                balance: tokenBalance
             }
         }))
     }

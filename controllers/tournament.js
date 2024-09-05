@@ -49,12 +49,19 @@ exports.joinTournament = async (req, res) => {
                 message: "tournament is not LIVE!"
             }))
         }
-        const tx = await getLedgerContract().connect(getOwner()).forceJoinTournament(id, user.publicKey);
+        const ledgerContract = getLedgerContract().connect(getOwner());
+        const isParticipated = await ledgerContract.isUserParticipatedInTournament(id, user.publicKey);
+        if (isParticipated) {
+            return res.status(409).send(JSON.stringify({
+                message: "Already participated!"
+            }))
+        }
+        const tx = await ledgerContract.forceJoinTournament(id, user.publicKey);
         const receipt = await tx.wait();
         if (receipt.status == 1) {
             tournament.participants.push({
                 publicKey: user.publicKey,
-                stepCount: 0,
+                steps: 0,
                 username: username,
             })
             await tournament.save();
@@ -72,7 +79,10 @@ exports.joinTournament = async (req, res) => {
         }
     }
     catch (e) {
-        res.status(500).send(JSON.stringify(e));
+        console.log(e)
+        res.status(500).send(JSON.stringify({
+            error: e
+        }));
     }
 }
 

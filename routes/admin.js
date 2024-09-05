@@ -3,7 +3,7 @@ const { createTournament } = require("../controllers/admin");
 
 const adminRouter = express.Router();
 
-adminRouter.post("/admin/automate-reward", createTournament)
+adminRouter.post("/create-tournament", createTournament)
 
 
 module.exports = { adminRouter }
