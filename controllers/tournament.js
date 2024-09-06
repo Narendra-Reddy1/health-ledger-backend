@@ -111,10 +111,12 @@ exports.recordSteps = async (req, res) => {
                 message: `no pqrticipant with username: ${username}`
             })
         }
-        const tx = await getLedgerContract().connect(getOwner()).recordSteps(id, participant.publicKey, stepCount);
+        const ledgerContract = getLedgerContract().connect(getOwner());
+        const tx = await ledgerContract.recordSteps(id, participant.publicKey, stepCount);
         const receipt = await tx.wait();
         if (receipt.status == 1) {
-            participant.steps += stepCount;
+            const steps = (Number)(await ledgerContract.getUserStepCount(id, participant.publicKey));
+            participant.steps += steps;
             await tournament.save();
             res.status(200).send(JSON.stringify({
                 txHash: tx.hash,

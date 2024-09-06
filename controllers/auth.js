@@ -21,8 +21,10 @@ exports.postSignup = async (req, res) => {
         })
         await user.save();
         res.status(201).send(JSON.stringify({
-            username: user.username,
-            steps: user.stepsCount
+            user: {
+                username: user.username,
+                steps: user.stepsCount
+            }
         }));
     }
     catch (e) {
@@ -35,7 +37,9 @@ exports.postLogin = async (req, res) => {
     try {
 
         const user = await UserModel.findOne({ username: req.body.username });
-        const isMatched = await bcrypt.compare(req.body.password, user.password);
+        let isMatched = false;
+        if (user)
+            isMatched = await bcrypt.compare(req.body.password, user.password);
         if (!isMatched || !user) {
             return res.status(404).send(JSON.stringify({
                 message: "Invalid credentials"

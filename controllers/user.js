@@ -9,7 +9,14 @@ const { tokenContract, getTokenContract, getProvider, getDefaultRunner, getOwner
 exports.createWallet = async (req, res) => {
     try {
         const username = req.params.username;
+        const passkey = req.body.passkey;
+
         //if only user name? then any one can trigger this API to create wallet. PREVENT ITT
+        // if (passkey.length < 6) {
+        //     return res.status(400).send(JSON.stringify({
+        //         message: "Secuirity Pin is short"
+        //     }))
+        // }
         const user = await UserModel.findOne({ username: username });
         if (user.wallet != null | undefined) {
             return res.status(409).send(JSON.stringify({
@@ -17,18 +24,23 @@ exports.createWallet = async (req, res) => {
             }))
         }
         const wallet = ethers.Wallet.createRandom(getProvider())
-        const encryptedWallet = await wallet.encrypt(req.body.passkey);
+        const encryptedWallet = await wallet.encrypt(passkey);
         user.publicKey = wallet.address
         user.wallet = encryptedWallet;
         user.pin = bcrypt.hashSync(req.body.passkey)
         await user.save();
         res.send(JSON.stringify({
-            publicKey: wallet.address,
+            user: {
+                publicKey: wallet.address,
+                balance: 0
+            }
         }))
     }
     catch (e) {
         console.log(e);
-        res.status(500).send(JSON.stringify(e));
+        res.status(500).send(JSON.stringify({
+            error: e
+        }));
     }
 }
 
