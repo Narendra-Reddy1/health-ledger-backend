@@ -18,6 +18,10 @@ const Tournament = new mongoose.Schema({
         type: Number,
         required: true
     },
+    txHash: {
+        type: String,
+        required: true
+    },
     startTime: {
         type: Number,
         required: true
@@ -49,6 +53,14 @@ const Tournament = new mongoose.Schema({
         },
         _id: false
     }],
+    isEnded: {
+        type: Boolean,
+        required: false,
+    },
+    areRewardsDispersed: {
+        type: Boolean,
+        required: false
+    }
 })
 Tournament.methods.isUserParticipated = async function (username) {
     try {

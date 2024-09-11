@@ -1,6 +1,8 @@
 const { getLedgerContract, getOwner } = require("../core/contracts");
+const prizeDistribution = require("../models/prizeDistribution");
 const Tournament = require("../models/Tournament");
 const UserModel = require("../models/User");
+const cron = require("node-cron");
 
 
 //creating tournament is admin task
@@ -10,20 +12,32 @@ const UserModel = require("../models/User");
 // }
 
 exports.getTournament = async (req, res) => {
-    const id = req.body.tournamentId
-    const tournament = await Tournament.findOne({ tournamentId: id });
-    if (!tournament) {
-        return res.status(404).send(JSON.stringify({
-            message: `Can't find Tournament with id: ${id}`
+
+    try {
+
+        const id = req.params.tournamentId
+        const tournament = await Tournament.findOne({ tournamentId: id });
+        if (!tournament) {
+            return res.status(404).send(JSON.stringify({
+                message: `Can't find Tournament with id: ${id}`
+            }))
+        }
+        tournament.participants.sort((a, b) => {
+            return (b.steps - a.steps)
+        });
+        const distribution = await prizeDistribution.findOne({ id: tournament.prizeDistributionId });
+        res.status(200).send(JSON.stringify({
+            data: tournament,
+            distribution: distribution.distribution
         }))
     }
-    tournament.participants.sort((a, b) => {
-        return (b.stepCount - a.stepCount)
-    });
-    //console.log(await tournament.isUserParticipated("reddy"))
-
-    res.status(200).send(JSON.stringify(tournament))
+    catch (e) {
+        res.status(500).send(JSON.stringify({
+            message: e
+        }))
+    }
 }
+
 
 
 exports.joinTournament = async (req, res) => {
@@ -65,6 +79,11 @@ exports.joinTournament = async (req, res) => {
                 username: username,
             })
             await tournament.save();
+            user.tournaments.push({
+                tournamentId: id,
+                isParticipated: true
+            })
+            await user.save();
             return res.status(201).send(JSON.stringify({
                 txHash: tx.hash,
                 tournamentId: id,
@@ -93,6 +112,11 @@ exports.recordSteps = async (req, res) => {
         const username = req.body.username;
         const id = req.body.tournamentId;
 
+        if (stepCount < 0) {
+            return res.status(400).send(JSON.stringify({
+                message: `Invalid steps value sent ${stepCount}`
+            }))
+        }
         const tournament = await Tournament.findOne({ tournamentId: id });
         if (!tournament) {
             return res.status(404).send(JSON.stringify({
@@ -116,12 +140,12 @@ exports.recordSteps = async (req, res) => {
         const receipt = await tx.wait();
         if (receipt.status == 1) {
             const steps = (Number)(await ledgerContract.getUserStepCount(id, participant.publicKey));
-            participant.steps += steps;
+            participant.steps += stepCount;
             await tournament.save();
             res.status(200).send(JSON.stringify({
                 txHash: tx.hash,
                 tournamentId: id,
-                updatedSteps: participant.steps
+                updatedSteps: steps
             }))
         }
         else {
@@ -135,4 +159,3 @@ exports.recordSteps = async (req, res) => {
         res.status(500).send(e.toString())
     }
 }
-

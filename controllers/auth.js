@@ -47,13 +47,13 @@ exports.postLogin = async (req, res) => {
         }
         let tokenBalance = 0;
         if (user.publicKey)
-            tokenBalance = (Number)(await getTokenContract().connect(getDefaultRunner()).balanceOf(user.publicKey))
+            tokenBalance = (await getTokenContract().connect(getDefaultRunner()).balanceOf(user.publicKey))
         res.status(200).send(JSON.stringify({
             user: {
                 username: user.username,
                 stepsCount: user.stepsCount,
                 publicKey: user.publicKey,
-                balance: tokenBalance
+                balance: (Number)(ethers.formatUnits(tokenBalance))
             }
         }))
     }

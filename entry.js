@@ -16,8 +16,8 @@ app.use(express.json());
 //     next();
 // })
 app.use(authRouter);
+app.use("/tournament", tournamentRouter);
 app.use(userRouter);
-app.use(tournamentRouter);
 app.use(configRouter);
 app.use("/admin", adminRouter);
 

@@ -5,7 +5,11 @@ const PrizeDistribution = require("../models/prizeDistribution");
 const Tournament = require("../models/Tournament");
 const { ledgerConfig } = require("../core/metadata");
 
-
+let isDispersingRewards = false;
+let areRewardsDispersed = false;
+let tournamentId;
+//let cronJob = [];
+let cronJob;
 exports.createTournament = async (req, res) => {
 
     //HOW are you gonna disperse ther rewards????
@@ -56,6 +60,7 @@ exports.createTournament = async (req, res) => {
 
             const tournament = await Tournament.create({
                 tournamentId: (Number)(tournamentId),
+                txHash: tx.hash,
                 startTime: startTime,
                 endTime: endTime,
                 prizePool: prizePool,
@@ -63,6 +68,19 @@ exports.createTournament = async (req, res) => {
             });
             await tournament.save();
 
+            const task = cron.schedule("* * * * * * ", () => {
+                //Disperse  funds. for the  completed  tournament
+                dispereseFundsToWinners();
+            }, {
+                timezone: "Asia/Kolkata"
+            })
+            cronJob = task;
+            // cronJob.push({
+            //     task: task,
+            //     isDispersingRewards: false,
+            //     tournamentId: tournamentId
+            // }
+            // );
             return res.status(201).send(JSON.stringify({
                 txHash: tx.hash,
                 tournamentId: (Number)(tournamentId),
@@ -81,3 +99,57 @@ exports.createTournament = async (req, res) => {
     }
 }
 
+async function dispereseFundsToWinners() {
+    if (isDispersingRewards) return;
+    const tournament = await Tournament.findOne({ tournamentId: tournamentId });
+    const currentTime = Date.now() / 1000;
+    if (tournament.endTime < currentTime) {
+        tournament.isEnded = true;
+        tournament = await tournament.save();
+    }
+    if (tournament.isEnded && tournament.areRewardsDispersed) {
+        cronJob.stop();
+        return;
+    }
+    else if (tournament.isEnded && !tournament.areRewardsDispersed) {
+
+        const ledgerContract = getLedgerContract().connect(getOwner());
+        const participants = tournament.participants.sort((a, b) => {
+            return (b.steps - a.steps)
+        });
+
+        for (let i = 0; i < participants.length; i++) {
+            if (i >= 100) break;
+            const publicKey = participants[i].publicKey;
+            const share = getPrizePoolShare(i + 1);
+            const tx = await ledgerContract.rewardWinner(tournament.tournamentId, publicKey, ethers.parseEther(share.toString()));
+            const resp = await tx.wait();
+            if (resp.status != 1) {
+                console.log("Failed transaction ", participants[i].username, share);
+            }
+        }
+        tournament.areRewardsDispersed = true;
+        await tournament.save();
+
+    }
+
+
+
+}
+
+function getPrizePoolShare(prizePoolAmount, rank) {
+
+    if (rank >= 51 && rank <= 100) return GetShare(5 / (100 - 50));
+    if (rank >= 26 && rank <= 50) return GetShare(8 / (50 - 25));
+    if (rank >= 11 && rank <= 25) return GetShare(16 / (25 - 10));
+    if (rank >= 4 && rank <= 10) return GetShare(20 / (10 - 3));
+    if (rank == 3) return GetShare(20);
+    if (rank == 2) return GetShare(15);
+    if (rank == 1) return GetShare(25);
+
+    return 0; //not eligible for Prizepool
+    GetShare(percent)
+    {
+        return (prizePoolAmount * percent) / 100;
+    }
+}

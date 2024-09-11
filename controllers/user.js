@@ -1,8 +1,7 @@
 const { ethers } = require("ethers");
 const UserModel = require("../models/User");
 const bcrypt = require("bcryptjs");
-const { JsonRpcProvider } = require("ethers");
-const { tokenContract, getTokenContract, getProvider, getDefaultRunner, getOwner } = require("../core/contracts");
+const { getTokenContract, getProvider, getDefaultRunner, getOwner } = require("../core/contracts");
 
 
 
@@ -44,7 +43,49 @@ exports.createWallet = async (req, res) => {
     }
 }
 
+exports.getUserInfo = async (req, res) => {
+    const user = await UserModel.findOne({ username: req.params.username });
+    if (!user) {
+        return res.status(404).send(JSON.stringify({
+            message: `User not found with username: ${req.body.username}`
+        }))
+    }
+    let tokenBalance = 0;
+    if (user.publicKey)
+        tokenBalance = (await getTokenContract().connect(getDefaultRunner()).balanceOf(user.publicKey))
+    res.status(200).send(JSON.stringify({
+        user: {
+            username: user.username,
+            stepsCount: user.stepsCount,
+            publicKey: user.publicKey,
+            balance: (Number)(ethers.formatUnits(tokenBalance)),
+            tournaments: user.tournaments
+        }
+    }))
+}
 
+exports.recordUserSteps = async (req, res) => {
+    const username = req.params.username;
+    const steps = req.body.steps;
+
+    if (steps < 0) {
+        return res.status(400).send(JSON.stringify({
+            message: `Invalid steps count sent ${steps}`
+        }));
+    }
+    const user = await UserModel.findOne({ username: username });
+    if (!user) {
+        return res.status(404).send(JSON.stringify({
+            message: `No user found with username ${username}`
+        }));
+    }
+    user.stepsCount += steps;
+    await user.save();
+    res.status(200).send(JSON.stringify({
+        username: username,
+        updatedSteps: user.stepsCount
+    }))
+}
 
 exports.getBalance = async (req, res) => {
     try {
@@ -63,7 +104,7 @@ exports.getBalance = async (req, res) => {
         res.send(JSON.stringify({
             publicKey: user.publicKey,
             balances: {
-                tokens: tokenBalance.toString()
+                tokens: (Number)(ethers.formatUnits(tokenBalance.toString()))
             }
         }))
     }
@@ -76,7 +117,8 @@ exports.withdraw = async (req, res) => {
     try {
         const username = req.params.username;
         const { passkey, amount, toAddress } = req.body;
-        const user = UserModel.findOne({ username: username });
+        const user = await UserModel.findOne({ username: username });
+        const parsedAmount = ethers.parseEther(amount.toString());
         if (!user) {
             return res.status(404).send(JSON.stringify({
                 message: `user not found with username: ${username}`
@@ -89,23 +131,26 @@ exports.withdraw = async (req, res) => {
             }))
         }
         const balance = await getTokenContract().connect(getDefaultRunner()).balanceOf(user.publicKey);
-        if (amount < 0 || amount > balance) {
+        const formattedBalance = (Number)(ethers.formatUnits(balance));
+        if (parsedAmount < 0n || parsedAmount > balance) {
             return res.status(400).send(JSON.stringify({
                 message: "invalid balance",
                 requestedAmount: amount,
-                balance: balance
+                balance: formattedBalance
             }))
         }
 
         const wallet = await ethers.Wallet.fromEncryptedJson(user.wallet, passkey);
-        const tokenContract = await getTokenContract().connect(wallet);
-        const tx = tokenContract.transfer(toAddress, amount);
+        const singerWallet = wallet.connect(getProvider())
+        const tokenContract = getTokenContract().connect(singerWallet);
+        const tx = await tokenContract.transfer(toAddress, parsedAmount);
         const receipt = await tx.wait();
         if (receipt.status == 1) {
-            const newBalance = (Number)(await tokenContract.balanceOf(wallet.address))
+            const newBalance = (await tokenContract.balanceOf(wallet.address))
+            const formattedBalance = (Number)(ethers.formatUnits(newBalance));
             res.status(200).send(JSON.stringify({
                 txHash: tx.hash,
-                updatedBalance: newBalance
+                updatedBalance: formattedBalance
             }))
         }
         else {
@@ -115,7 +160,10 @@ exports.withdraw = async (req, res) => {
         }
     }
     catch (e) {
-        res.status(500).send(JSON.stringify(e))
+        console.log(e);
+        res.status(500).send(JSON.stringify({
+            message: e
+        }))
     }
 
 }

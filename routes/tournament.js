@@ -5,7 +5,8 @@ const tournamentRouter = express.Router();
 
 
 
-tournamentRouter.get("/get-tournament", getTournament)
-tournamentRouter.post("/join-tournament", joinTournament)
-tournamentRouter.patch("/record-steps", recordSteps);
+tournamentRouter.get("/get/:tournamentId", getTournament)
+tournamentRouter.post("/join", joinTournament)
+tournamentRouter.post("/record-steps", recordSteps);
+
 module.exports = { tournamentRouter }
